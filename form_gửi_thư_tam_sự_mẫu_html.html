@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Form gửi thư tâm sự</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#7dd3fc;--muted:#9aa4b2;--glass: rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,#071020 0%, #071827 100%);display:flex;align-items:center;justify-content:center;padding:24px;color:#e6eef6}
+    .container{width:100%;max-width:720px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:28px;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+    h1{margin:0 0 8px;font-size:20px}
+    p.lead{margin:0 0 18px;color:var(--muted);font-size:14px}
+    label{display:block;margin:12px 0 6px;font-size:13px;color:var(--muted)}
+    input[type=text], input[type=email], textarea, select{width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit;font-size:14px;box-sizing:border-box}
+    textarea{min-height:140px;resize:vertical}
+    .row{display:flex;gap:12px}
+    .row .col{flex:1}
+    .inline{display:flex;align-items:center;gap:8px;margin-top:8px}
+    .btn{margin-top:18px;padding:10px 14px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),#60a5fa);color:#042028;font-weight:600;cursor:pointer}
+    .muted-small{font-size:12px;color:var(--muted);margin-top:8px}
+    .hidden{display:none}
+    .card-note{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;margin-top:14px;color:var(--muted);font-size:13px}
+    .success{background:#062f2a;color:#bfffe6;padding:12px;border-radius:10px;margin-top:12px}
+    footer{margin-top:18px;font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Gửi thư tâm sự</h1>
+    <p class="lead">Mẫu form đơn giản để người khác gửi thư tâm sự tới bạn. Bạn có thể cho phép gửi ẩn danh hoặc yêu cầu thông tin liên hệ.</p>
+
+    <!-- CẤU HÌNH: Thay {your-formspree-id} bằng ID Formspree thực tế hoặc thay action bằng endpoint bạn thích -->
+    <form id="confessForm" action="https://formspree.io/f/{your-formspree-id}" method="POST">
+
+      <label for="name">Họ tên (tuỳ chọn)</label>
+      <input id="name" name="name" type="text" placeholder="Tên thật hoặc bút danh" />
+
+      <label for="email">Email (tuỳ chọn nếu muốn nhận trả lời)</label>
+      <input id="email" name="email" type="email" placeholder="ví dụ: ban@vd.com" />
+
+      <label for="message">Tin nhắn / Thư tâm sự</label>
+      <textarea id="message" name="message" required placeholder="Viết thư ở đây... (bắt buộc)"></textarea>
+
+      <div class="inline">
+        <input id="anonymous" name="anonymous" type="checkbox" />
+        <label for="anonymous">Gửi ẩn danh (ẩn tên và email)</label>
+      </div>
+
+      <label class="muted-small">Bạn có thể bật tuỳ chọn gửi kèm ảnh hoặc file bằng dịch vụ khác (tính năng nâng cao).</label>
+
+      <!-- Trường ẩn để Formspree hoặc backend xử lý tiêu đề / redirect nếu muốn -->
+      <input type="hidden" name="_subject" value="Thư tâm sự mới" />
+      <input type="hidden" name="_captcha" value="false" />
+
+      <button class="btn" type="submit">Gửi thư</button>
+
+      <div id="status" class="hidden"></div>
+
+      <div class="card-note">
+        <strong>Lưu ý về quyền riêng tư:</strong> Nếu người gửi chọn ẩn danh, form sẽ xóa trường tên/email trước khi gửi. Không lưu trữ dữ liệu nhạy cảm trên dịch vụ không bảo mật. Nếu cần ẩn danh tuyệt đối, khuyến khích người gửi không nhập thông tin nhận dạng.
+      </div>
+
+      <footer>Muốn thông báo qua email khi có thư mới? Đăng ký email nhận thông báo trong cấu hình dịch vụ (vd: Formspree, Zapier, Google Sheets).</footer>
+    </form>
+  </main>
+
+  <script>
+    (function(){
+      const form = document.getElementById('confessForm');
+      const anonymous = document.getElementById('anonymous');
+      const nameInput = document.getElementById('name');
+      const emailInput = document.getElementById('email');
+      const status = document.getElementById('status');
+
+      form.addEventListener('submit', async function(e){
+        e.preventDefault();
+
+        // Nếu ẩn danh thì xoá dữ liệu name/email
+        if(anonymous.checked){
+          nameInput.value = '';
+          emailInput.value = '';
+        }
+
+        // Chuẩn bị dữ liệu
+        const formData = new FormData(form);
+
+        // Hiển thị trạng thái gửi
+        status.className = '';
+        status.textContent = 'Đang gửi...';
+
+        try{
+          // Gửi bằng fetch tới action (cần endpoint hỗ trợ CORS)
+          const resp = await fetch(form.action, {
+            method: form.method,
+            body: formData,
+            headers: { 'Accept': 'application/json' }
+          });
+
+          if (resp.ok) {
+            status.className = 'success';
+            status.textContent = 'Gửi thành công — cảm ơn người gửi ❤️';
+            form.reset();
+          } else {
+            const data = await resp.json();
+            status.className = '';
+            status.textContent = data.error || 'Có lỗi khi gửi, thử lại sau.';
+          }
+        } catch(err){
+          status.className = '';
+          status.textContent = 'Lỗi kết nối. Nếu dùng Formspree, kiểm tra Form ID và CORS hoặc chuyển sang gửi qua Google Forms.';
+          console.error(err);
+        }
+      });
+
+    })();
+  </script>
+</body>
+</html>
